@@ -1,0 +1,1274 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="按时提醒">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="description" content="每日定时提醒">
+<link rel="manifest" href="manifest.json">
+<title>按时提醒</title>
+<style>
+:root {
+  --bg: #FEF9F3;
+  --card: #FFFFFF;
+  --text: #2D2320;
+  --muted: #A0918C;
+  --accent: #E94560;
+  --accent2: #D63850;
+  --navy: #1E2A3A;
+  --gold: #E8A850;
+  --green: #3CB878;
+  --border: #EDE6DF;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --radius: 16px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { height:100%; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  justify-content:center;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.app {
+  width:100%;
+  max-width:440px;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+/* ---- Header ---- */
+.header {
+  text-align:center;
+  padding:8px 0 0;
+}
+.header .title {
+  font-size:15px;
+  font-weight:600;
+  color:var(--navy);
+  letter-spacing:1px;
+}
+.header .date-str {
+  font-size:13px;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+/* ---- Current Time ---- */
+.live-clock {
+  text-align:center;
+  font-size:36px;
+  font-weight:700;
+  color:var(--navy);
+  letter-spacing:2px;
+  line-height:1;
+}
+
+/* ---- Alarm Card ---- */
+.alarm-card {
+  background:var(--navy);
+  border-radius:var(--radius);
+  padding:22px 20px;
+  text-align:center;
+  color:#fff;
+  box-shadow:0 6px 24px rgba(30,42,58,0.25);
+  position:relative;
+  overflow:hidden;
+}
+.alarm-card::before {
+  content:'';
+  position:absolute;
+  top:-30px; right:-30px;
+  width:100px; height:100px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.04);
+}
+.alarm-card .alarm-label {
+  font-size:13px;
+  color:rgba(255,255,255,0.6);
+  letter-spacing:2px;
+  margin-bottom:6px;
+}
+.alarm-card .alarm-time {
+  font-size:56px;
+  font-weight:800;
+  letter-spacing:3px;
+  line-height:1;
+  color:#fff;
+}
+.alarm-card .alarm-time .colon {
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity:0.3; } }
+.alarm-card .days-row {
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  margin-top:14px;
+}
+.alarm-card .day-dot {
+  width:34px; height:34px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  font-weight:600;
+  background:rgba(255,255,255,0.12);
+  color:rgba(255,255,255,0.45);
+  transition:.2s;
+}
+.alarm-card .day-dot.on {
+  background:var(--accent);
+  color:#fff;
+}
+.alarm-card .countdown {
+  margin-top:14px;
+  font-size:15px;
+  color:var(--gold);
+  font-weight:500;
+}
+.alarm-card .skip-today {
+  display:inline-block;
+  margin-top:10px;
+  font-size:13px;
+  color:rgba(255,255,255,0.5);
+  text-decoration:underline;
+  cursor:pointer;
+  padding:6px 10px;
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display:block;
+  width:100%;
+  padding:16px;
+  border:none;
+  border-radius:14px;
+  font-size:18px;
+  font-weight:600;
+  cursor:pointer;
+  text-align:center;
+  transition:.15s;
+  font-family:inherit;
+  letter-spacing:1px;
+}
+.btn:active { transform:scale(0.97); }
+.btn-voice {
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 4px 16px rgba(233,69,96,0.3);
+  padding:18px;
+  font-size:20px;
+}
+.btn-voice:active { background:var(--accent2); }
+.btn-voice.listening {
+  background:#FF6B81;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow:0 4px 16px rgba(233,69,96,0.3); }
+  50% { box-shadow:0 4px 32px rgba(233,69,96,0.55); }
+}
+.btn-outline {
+  background:transparent;
+  color:var(--accent);
+  border:1.5px solid var(--accent);
+  padding:12px;
+  font-size:15px;
+}
+.btn-sm {
+  width:auto;
+  display:inline-block;
+  padding:10px 22px;
+  font-size:14px;
+  border-radius:10px;
+}
+
+/* ---- Manual Editor ---- */
+.editor {
+  display:none;
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:18px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+.editor.show { display:block; }
+.editor .edit-row {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin-bottom:12px;
+}
+.editor .edit-val {
+  font-size:40px;
+  font-weight:700;
+  min-width:70px;
+  text-align:center;
+  color:var(--navy);
+}
+.editor .edit-label {
+  font-size:14px;
+  color:var(--muted);
+  margin:0 6px;
+}
+.editor .adj-btn {
+  width:44px; height:44px;
+  border-radius:50%;
+  border:2px solid var(--border);
+  background:#fff;
+  font-size:22px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--navy);
+}
+.editor .adj-btn:active { background:#f5f5f5; }
+.editor .day-toggles {
+  display:flex;
+  justify-content:center;
+  gap:6px;
+  margin:14px 0;
+  flex-wrap:wrap;
+}
+.editor .day-toggle {
+  width:38px; height:38px;
+  border-radius:50%;
+  border:2px solid var(--border);
+  background:#fff;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.15s;
+}
+.editor .day-toggle.on {
+  background:var(--accent);
+  color:#fff;
+  border-color:var(--accent);
+}
+.editor .btn-confirm {
+  background:var(--navy);
+  color:#fff;
+  padding:12px 40px;
+  border:none;
+  border-radius:10px;
+  font-size:15px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+/* ---- Voice result toast ---- */
+.toast {
+  position:fixed;
+  top:20px; left:50%;
+  transform:translateX(-50%);
+  background:var(--navy);
+  color:#fff;
+  padding:12px 24px;
+  border-radius:24px;
+  font-size:14px;
+  font-weight:500;
+  z-index:200;
+  opacity:0;
+  transition:opacity .3s;
+  pointer-events:none;
+  max-width:90%;
+  text-align:center;
+}
+.toast.show { opacity:1; }
+
+/* ---- Alarm Overlay ---- */
+.overlay {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.88);
+  z-index:300;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:20px;
+}
+.overlay.show { display:flex; }
+.overlay .bell-icon { font-size:80px; animation: shake 0.6s ease-in-out infinite; }
+@keyframes shake {
+  0%,100% { transform:rotate(0); }
+  20% { transform:rotate(-12deg); }
+  40% { transform:rotate(12deg); }
+  60% { transform:rotate(-8deg); }
+  80% { transform:rotate(8deg); }
+}
+.overlay .overlay-title {
+  font-size:32px;
+  font-weight:700;
+  color:#fff;
+  letter-spacing:2px;
+}
+.overlay .overlay-sub {
+  font-size:18px;
+  color:rgba(255,255,255,0.65);
+}
+.overlay .overlay-btn {
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:16px 60px;
+  border-radius:30px;
+  font-size:20px;
+  font-weight:600;
+  cursor:pointer;
+  letter-spacing:1px;
+  animation: pulseBtn 1.5s ease-in-out infinite;
+}
+@keyframes pulseBtn {
+  0%,100% { box-shadow:0 0 0 0 rgba(233,69,96,0.5); }
+  50% { box-shadow:0 0 0 16px rgba(233,69,96,0); }
+}
+.overlay .snooze-btn {
+  color:rgba(255,255,255,0.4);
+  background:none;
+  border:none;
+  font-size:14px;
+  cursor:pointer;
+  padding:8px 16px;
+  font-family:inherit;
+}
+
+/* ---- History ---- */
+.history-toggle {
+  text-align:center;
+  font-size:13px;
+  color:var(--muted);
+  cursor:pointer;
+  padding:8px;
+}
+.history-list {
+  display:none;
+  background:var(--card);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.history-list.show { display:block; }
+.history-item {
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:14px;
+}
+.history-item:last-child { border-bottom:none; }
+.history-item .hi-date { color:var(--muted); font-size:12px; }
+.history-item .hi-status { font-size:14px; }
+.empty-hint {
+  padding:24px;
+  text-align:center;
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* ---- Responsive ---- */
+@media (min-width:440px) {
+  .app { padding:20px 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title">⏰ 按时提醒</div>
+    <div class="date-str" id="dateStr"></div>
+  </div>
+
+  <!-- Live Clock -->
+  <div class="live-clock" id="liveClock"></div>
+
+  <!-- Alarm Card -->
+  <div class="alarm-card" id="alarmCard">
+    <div class="alarm-label">⏰ 闹钟时间</div>
+    <div class="alarm-time" id="alarmTimeDisplay">19:00</div>
+    <div class="days-row" id="daysRow"></div>
+    <div class="countdown" id="countdown"></div>
+    <span class="skip-today" id="skipToday" onclick="skipToday()">今天休息，不提醒 →</span>
+  </div>
+
+  <!-- Voice Button -->
+  <button class="btn btn-voice" id="voiceBtn" onpointerdown="startVoice()" ontouchstart="startVoice();return false" onpointerup="stopVoice()" ontouchend="stopVoice();return false" onpointerleave="stopVoice()">
+    🎤 按住说话，松手确认
+  </button>
+
+  <!-- Manual Edit Toggle -->
+  <button class="btn btn-outline" id="editToggle" onclick="toggleEditor()">
+    ✏️ 手动调整时间
+  </button>
+
+  <!-- Manual Editor -->
+  <div class="editor" id="editor">
+    <div class="edit-row">
+      <button class="adj-btn" onclick="adjustTime('hour',-1)">−</button>
+      <span class="edit-val" id="editHour">19</span>
+      <span class="edit-label">时</span>
+      <button class="adj-btn" onclick="adjustTime('hour',1)">+</button>
+      <span style="width:16px"></span>
+      <button class="adj-btn" onclick="adjustTime('min',-1)">−</button>
+      <span class="edit-val" id="editMin">00</span>
+      <span class="edit-label">分</span>
+      <button class="adj-btn" onclick="adjustTime('min',1)">+</button>
+    </div>
+    <div class="day-toggles" id="editDays"></div>
+    <button class="btn-confirm" onclick="confirmManual()">✓ 确定</button>
+  </div>
+
+  <!-- History -->
+  <div class="history-toggle" onclick="toggleHistory()">📋 查看最近记录 ▾</div>
+  <div class="history-list" id="historyList"></div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Alarm Overlay -->
+<div class="overlay" id="overlay">
+  <div class="bell-icon">🔔</div>
+  <div class="overlay-title">妈，准备出门了</div>
+  <div class="overlay-sub" id="overlaySub"></div>
+  <button class="overlay-btn" onclick="dismissAlarm()">我知道了</button>
+  <button class="snooze-btn" onclick="snoozeAlarm()">5分钟后再提醒</button>
+</div>
+
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const DAY_LABELS = ['日','一','二','三','四','五','六'];
+const STORAGE_KEY = 'reminder_config';
+const HISTORY_KEY = 'reminder_history';
+const TODAY_KEY = 'reminder_today';
+
+// Chinese number → digit mapping
+const CN_NUMS = {
+  '零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,
+  '0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'11':11,'12':12,
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let config = loadConfig();
+let editTemp = null; // temp state for manual editor
+let alarmFiredToday = false;
+let snoozeUntil = null;
+
+// ============================================================
+// LOAD / SAVE
+// ============================================================
+function defaultConfig() {
+  return { hour:19, min:0, days:[0,1,2,3,4,5,6] }; // Every day 7PM
+}
+
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (typeof c.hour==='number' && typeof c.min==='number' && Array.isArray(c.days)) return c;
+    }
+  } catch(e) {}
+  return defaultConfig();
+}
+
+function saveConfig() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+}
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  } catch(e) { return []; }
+}
+
+function saveHistory(h) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+}
+
+function getTodayStatus() {
+  try {
+    const s = JSON.parse(localStorage.getItem(TODAY_KEY) || '{}');
+    const today = dateKey();
+    if (s.date !== today) return { date:today, skipped:false, fired:false, firedAt:null };
+    return s;
+  } catch(e) { return { date:dateKey(), skipped:false, fired:false, firedAt:null }; }
+}
+
+function saveTodayStatus(s) {
+  localStorage.setItem(TODAY_KEY, JSON.stringify(s));
+}
+
+function dateKey(d) {
+  d = d || new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmtTime(h, m) {
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+
+function isDayActive(dayIndex) {
+  return config.days.includes(dayIndex);
+}
+
+function nextAlarmTime(now) {
+  // Find the next alarm occurrence
+  const d = new Date(now);
+  d.setHours(config.hour, config.min, 0, 0);
+
+  // If alarm time has passed today, or today is not active, find next active day
+  for (let i = 0; i < 8; i++) {
+    const check = new Date(now);
+    check.setDate(check.getDate() + i);
+    check.setHours(config.hour, config.min, 0, 0);
+    const dow = check.getDay();
+    if (config.days.includes(dow)) {
+      if (i === 0 && check <= now) continue;
+      return check;
+    }
+  }
+  return null;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderAll() {
+  renderClock();
+  renderAlarmCard();
+  renderDaysRow();
+  renderEditor();
+  renderHistory();
+}
+
+function renderClock() {
+  const now = new Date();
+  document.getElementById('liveClock').textContent =
+    String(now.getHours()).padStart(2,'0')+':'+
+    String(now.getMinutes()).padStart(2,'0')+':'+
+    String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('dateStr').textContent =
+    now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日 '+
+    '星期'+DAY_LABELS[now.getDay()];
+}
+
+function renderAlarmCard() {
+  document.getElementById('alarmTimeDisplay').textContent = fmtTime(config.hour, config.min);
+
+  const now = new Date();
+  const ts = getTodayStatus();
+  const today = dateKey();
+  const dow = now.getDay();
+
+  // Check if today was skipped
+  if (ts.date === today && ts.skipped) {
+    document.getElementById('countdown').textContent = '今日已跳过，不提醒';
+    document.getElementById('skipToday').style.display = 'none';
+  } else if (ts.date === today && ts.fired) {
+    document.getElementById('countdown').textContent = '✅ 今日已提醒 (' + (ts.firedAt||'') + ')';
+    document.getElementById('skipToday').style.display = 'none';
+  } else if (isDayActive(dow)) {
+    // Countdown to today's alarm
+    const alarmAt = new Date(now);
+    alarmAt.setHours(config.hour, config.min, 0, 0);
+    if (alarmAt > now) {
+      const diff = alarmAt - now;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      document.getElementById('countdown').textContent = '⏳ ' + h + '小时' + m + '分后提醒';
+    } else {
+      document.getElementById('countdown').textContent = '今天闹钟时间已过';
+    }
+    document.getElementById('skipToday').style.display = (alarmAt > now) ? 'inline-block' : 'none';
+  } else {
+    // Today not active, show next alarm
+    const next = nextAlarmTime(now);
+    if (next) {
+      const diff = next - now;
+      const days = Math.floor(diff / 86400000);
+      const hrs = Math.floor((diff % 86400000) / 3600000);
+      if (days === 0) {
+        document.getElementById('countdown').textContent = '明天 ' + fmtTime(config.hour, config.min) + ' 提醒';
+      } else {
+        document.getElementById('countdown').textContent = days + '天' + hrs + '小时后提醒（周' + DAY_LABELS[next.getDay()] + '）';
+      }
+    }
+    document.getElementById('skipToday').style.display = 'none';
+  }
+}
+
+function renderDaysRow() {
+  const row = document.getElementById('daysRow');
+  row.innerHTML = DAY_LABELS.map((l, i) => {
+    return '<div class="day-dot' + (isDayActive(i) ? ' on' : '') + '">' + l + '</div>';
+  }).join('');
+}
+
+function renderEditor() {
+  document.getElementById('editHour').textContent = String(editTemp ? editTemp.hour : config.hour).padStart(2,'0');
+  document.getElementById('editMin').textContent = String(editTemp ? editTemp.min : config.min).padStart(2,'0');
+
+  const days = editTemp ? editTemp.days : config.days;
+  const daysDiv = document.getElementById('editDays');
+  daysDiv.innerHTML = DAY_LABELS.map((l, i) => {
+    const on = days.includes(i);
+    return '<div class="day-toggle' + (on ? ' on' : '') + '" onclick="toggleEditDay(' + i + ')">' + l + '</div>';
+  }).join('');
+}
+
+function renderHistory() {
+  const history = loadHistory();
+  const div = document.getElementById('historyList');
+  if (history.length === 0) {
+    div.innerHTML = '<div class="empty-hint">暂无记录</div>';
+    return;
+  }
+  div.innerHTML = history.slice(0, 20).map(h => {
+    let statusIcon = '🔔';
+    if (h.type === 'skipped') statusIcon = '⏭️';
+    else if (h.type === 'dismissed') statusIcon = '✅';
+    else if (h.type === 'snoozed') statusIcon = '🔁';
+    return '<div class="history-item">' +
+      '<span>' + statusIcon + ' ' + h.time + '</span>' +
+      '<span class="hi-date">' + h.date + '</span>' +
+      '<span class="hi-status">' + (h.note||'') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+// ============================================================
+// MANUAL EDITOR
+// ============================================================
+function toggleEditor() {
+  const ed = document.getElementById('editor');
+  if (ed.classList.contains('show')) {
+    ed.classList.remove('show');
+    editTemp = null;
+  } else {
+    editTemp = { hour: config.hour, min: config.min, days: [...config.days] };
+    ed.classList.add('show');
+    renderEditor();
+  }
+}
+
+function adjustTime(field, delta) {
+  if (!editTemp) return;
+  if (field === 'hour') {
+    editTemp.hour = (editTemp.hour + delta + 24) % 24;
+  } else {
+    editTemp.min = (editTemp.min + delta + 60) % 60;
+    if (editTemp.min < 0) editTemp.min += 60;
+  }
+  renderEditor();
+}
+
+function toggleEditDay(dayIdx) {
+  if (!editTemp) return;
+  const pos = editTemp.days.indexOf(dayIdx);
+  if (pos >= 0) {
+    editTemp.days.splice(pos, 1);
+  } else {
+    editTemp.days.push(dayIdx);
+    editTemp.days.sort((a,b) => a-b);
+  }
+  renderEditor();
+}
+
+function confirmManual() {
+  if (!editTemp) return;
+  if (editTemp.days.length === 0) {
+    showToast('请至少选一天');
+    return;
+  }
+  config.hour = editTemp.hour;
+  config.min = editTemp.min;
+  config.days = editTemp.days;
+  saveConfig();
+  editTemp = null;
+  document.getElementById('editor').classList.remove('show');
+  resetTodayIfChanged();
+  renderAll();
+  showToast('已改为 ' + fmtTime(config.hour, config.min) + '，周' + config.days.map(d=>DAY_LABELS[d]).join('、'));
+  speakFeedback('好的，已改为' + describeTime(config.hour, config.min));
+}
+
+// ============================================================
+// VOICE INPUT
+// ============================================================
+let recognition = null;
+let voiceResult = '';
+
+function initRecognition() {
+  if (recognition) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('voiceBtn').textContent = '🎤 请用Chrome浏览器打开';
+    document.getElementById('voiceBtn').style.background = '#888';
+    document.getElementById('voiceBtn').disabled = true;
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'zh-CN';
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 3;
+  recognition.continuous = false;
+
+  recognition.onresult = function(ev) {
+    let best = '';
+    for (let i = 0; i < ev.results.length; i++) {
+      if (ev.results[i].isFinal) {
+        best = ev.results[i][0].transcript.trim() || best;
+      } else if (!best) {
+        best = ev.results[i][0].transcript.trim();
+      }
+    }
+    voiceResult = best;
+  };
+
+  recognition.onerror = function(ev) {
+    document.getElementById('voiceBtn').classList.remove('listening');
+    document.getElementById('voiceBtn').textContent = '🎤 按住说话，松手确认';
+    if (ev.error === 'not-allowed') {
+      showToast('请允许麦克风权限后重试');
+    } else if (ev.error === 'no-speech') {
+      showToast('没听到声音，请再说一次');
+    } else if (ev.error === 'audio-capture') {
+      showToast('无法访问麦克风');
+    } else if (ev.error === 'network') {
+      showToast('网络错误，请重试');
+    } else if (ev.error !== 'aborted') {
+      showToast('语音识别出错(' + ev.error + ')，可手动调整');
+    }
+  };
+
+  recognition.onend = function() {
+    document.getElementById('voiceBtn').classList.remove('listening');
+    document.getElementById('voiceBtn').textContent = '🎤 按住说话，松手确认';
+    if (voiceResult) {
+      processVoiceCommand(voiceResult);
+      voiceResult = '';
+    }
+  };
+}
+
+function startVoice() {
+  initRecognition();
+  if (!recognition) {
+    showToast('请用Chrome浏览器打开此页面');
+    return;
+  }
+
+  try { recognition.abort(); } catch(e) {}
+
+  const btn = document.getElementById('voiceBtn');
+  voiceResult = '';
+  try {
+    recognition.start();
+    btn.classList.add('listening');
+    btn.textContent = '🎙️ 正在听...松手完成';
+    // Don't show toast here - it triggers speech in some browsers and conflicts
+  } catch(e) {
+    document.getElementById('voiceBtn').textContent = '🎤 请用Chrome浏览器';
+    document.getElementById('voiceBtn').style.background = '#888';
+    document.getElementById('voiceBtn').disabled = true;
+    showToast('此浏览器不支持语音，请换Chrome');
+  }
+}
+
+function stopVoice() {
+  const btn = document.getElementById('voiceBtn');
+  btn.classList.remove('listening');
+  btn.textContent = '🎤 按住说话，松手确认';
+  if (!recognition) return;
+  // Small delay then stop, to capture final speech
+  setTimeout(function() {
+    try { recognition.stop(); } catch(e) {}
+  }, 200);
+}
+
+function processVoiceCommand(text) {
+  showToast('🔊 识别结果: ' + text);
+
+  // Strip trailing punctuation
+  text = text.replace(/[，。！？、.!?]$/, '').trim();
+  if (!text) return;
+
+  // --- Pattern: skip today ---
+  if (/(今天|明天).*(休息|不去|不用|不去了|跳过)/.test(text)) {
+    if (/明天/.test(text)) {
+      showToast('好的，明天已标记为休息');
+      speakFeedback('好的，明天休息');
+      const skipDate = new Date();
+      skipDate.setDate(skipDate.getDate() + 1);
+      skipSpecificDate(dateKey(skipDate));
+    } else {
+      skipToday();
+      speakFeedback('好的，今天已跳过');
+    }
+    return;
+  }
+
+  // --- Pattern: add/remove day ---
+  const addDayMatch = text.match(/(周|星期)([一二三四五六日天]).*?(也|加上|加|提醒)/);
+  const rmDayMatch = text.match(/(周|星期)([一二三四五六日天]).*?(不用|取消|去掉|不要)/);
+  if (addDayMatch) {
+    const dayIdx = dayLabelToIndex(addDayMatch[2]);
+    if (dayIdx >= 0 && !config.days.includes(dayIdx)) {
+      config.days.push(dayIdx);
+      config.days.sort(function(a,b){return a-b;});
+      saveConfig();
+      resetTodayIfChanged();
+      renderAll();
+      showToast('已添加周' + DAY_LABELS[dayIdx]);
+      speakFeedback('好的，周' + DAY_LABELS[dayIdx] + '也提醒');
+      return;
+    }
+  }
+  if (rmDayMatch) {
+    const dayIdx = dayLabelToIndex(rmDayMatch[2]);
+    if (dayIdx >= 0 && config.days.includes(dayIdx)) {
+      config.days = config.days.filter(function(d){return d !== dayIdx;});
+      saveConfig();
+      resetTodayIfChanged();
+      renderAll();
+      showToast('已取消周' + DAY_LABELS[dayIdx]);
+      speakFeedback('好的，周' + DAY_LABELS[dayIdx] + '已取消');
+      return;
+    }
+  }
+
+  // --- Pattern: every day / weekday ---
+  if (/每天|天天|每一天/.test(text)) {
+    config.days = [0,1,2,3,4,5,6];
+    saveConfig(); resetTodayIfChanged(); renderAll();
+    showToast('已设为每天提醒');
+    speakFeedback('好的，每天都会提醒');
+    return;
+  }
+  if (/工作日/.test(text)) {
+    config.days = [1,2,3,4,5];
+    saveConfig(); resetTodayIfChanged(); renderAll();
+    showToast('已设为周一至周五');
+    speakFeedback('好的，工作日提醒');
+    return;
+  }
+
+  // --- Pattern: change time ---
+  // Match patterns like:
+  //   "改到晚上八点" / "改成七点半" / "调到8点10分"
+  //   "八点" / "7点半" / "晚上8点"
+  //   "改到19:30"
+
+  let hour = null;
+  let min = 0;
+
+  // Try "XX:XX" format like "19:30" or "19：30"
+  const colonMatch = text.match(/(\d{1,2})\s*[：:]\s*(\d{2})/);
+  if (colonMatch) {
+    hour = parseInt(colonMatch[1], 10);
+    min = parseInt(colonMatch[2], 10);
+  }
+
+  // Try "X点X分" / "X点半" / "X点" patterns
+  if (hour === null) {
+    const timePatterns = [
+      // "改到|改成|调到... 时间" prefix
+      /(?:改到|改成|调到|调整到|改为|设置到|设成|[到至])\s*(?:晚上|下午|傍晚|夜里|早上|上午|早晨)?\s*([零一二两三四五六七八九十\d]+)\s*点\s*(?:([零一二三四五六七八九十\d]+|半)\s*(?:分)?)?/,
+      // Bare: "晚上八点" / "下午3点"
+      /(晚上|下午|傍晚|夜里|早上|上午|早晨)\s*([零一二两三四五六七八九十\d]+)\s*点\s*(?:([零一二三四五六七八九十\d]+|半)\s*(?:分)?)?/,
+      // Bare: "八点半" / "7点"
+      /(?:^|[^0-9])([零一二两三四五六七八九十\d]+)\s*点\s*(?:([零一二三四五六七八九十\d]+|半)\s*(?:分)?)?/,
+    ];
+    for (let i = 0; i < timePatterns.length; i++) {
+      const m = text.match(timePatterns[i]);
+      if (m) {
+        hour = parseCNNumber(m[2] || m[1]);
+        if (m[3]) {
+          if (m[3] === '半') { min = 30; }
+          else { min = parseCNNumber(m[3]); }
+        }
+        break;
+      }
+    }
+  }
+
+  if (hour !== null && !isNaN(hour)) {
+    // Determine AM/PM
+    const isAM = /早上|上午|早晨/.test(text);
+    const isPM = /晚上|下午|傍晚|夜里/.test(text);
+    if (isPM && hour >= 1 && hour <= 11) { hour += 12; }
+    else if (isAM && hour === 12) { hour = 0; }
+    else if (!isAM && !isPM && hour >= 1 && hour <= 11) { hour += 12; } // default to PM
+
+    if (hour >= 24) hour = hour % 24;
+    if (isNaN(min) || min < 0) min = 0;
+    if (min >= 60) min = min % 60;
+
+    config.hour = hour;
+    config.min = min;
+    saveConfig();
+    resetTodayIfChanged();
+    renderAll();
+    const desc = describeTime(hour, min);
+    showToast('✓ 已改为 ' + fmtTime(hour, min));
+    speakFeedback('好的，已改为' + desc);
+    return;
+  }
+
+  // Fallback
+  showToast('没识别出指令，请说"改到晚上八点"');
+}
+
+function parseCNNumber(s) {
+  s = String(s).trim();
+  if (CN_NUMS.hasOwnProperty(s)) return CN_NUMS[s];
+  // Handle "十二" → 12, "二十三" → 23
+  if (s.length === 2 && CN_NUMS.hasOwnProperty(s[0]) && s[0]==='十') return 10 + (CN_NUMS[s[1]]||0);
+  if (s.length === 2 && CN_NUMS.hasOwnProperty(s[1]) && s[1]==='十') return (CN_NUMS[s[0]]||0) * 10;
+  if (s.length === 3 && s[1]==='十') return (CN_NUMS[s[0]]||0)*10 + (CN_NUMS[s[2]]||0);
+  const n = parseInt(s, 10);
+  return isNaN(n) ? NaN : n;
+}
+
+function dayLabelToIndex(label) {
+  if (label === '天' || label === '日') return 0;
+  const map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6 };
+  return map[label] !== undefined ? map[label] : -1;
+}
+
+function describeTime(h, m) {
+  let period = '上午';
+  let h12 = h;
+  if (h >= 18) { period = '晚上'; h12 = h - 12; }
+  else if (h >= 12) { period = '下午'; h12 = h === 12 ? 12 : h - 12; }
+  if (h === 0) { period = '凌晨'; h12 = 12; }
+  const hourStr = h12 + '点';
+  const minStr = m === 0 ? '' : (m === 30 ? '半' : m + '分');
+  return period + hourStr + minStr;
+}
+
+function skipSpecificDate(dateStr) {
+  // For now, just log it
+  const hist = loadHistory();
+  hist.unshift({ date: dateStr, time: fmtTime(config.hour, config.min), type: 'skipped', note: '语音跳过' });
+  saveHistory(hist);
+  renderHistory();
+}
+
+// ============================================================
+// TODAY ACTIONS
+// ============================================================
+function skipToday() {
+  const ts = getTodayStatus();
+  ts.skipped = true;
+  ts.date = dateKey();
+  saveTodayStatus(ts);
+
+  const hist = loadHistory();
+  hist.unshift({ date: dateKey(), time: fmtTime(config.hour, config.min), type: 'skipped', note: '已跳过' });
+  saveHistory(hist);
+
+  renderAll();
+  showToast('今天不提醒');
+}
+
+function resetTodayIfChanged() {
+  const ts = getTodayStatus();
+  const today = dateKey();
+  if (ts.date !== today) return; // already fresh
+  // Reset if alarm time changed significantly
+  saveTodayStatus({ date: today, skipped: false, fired: false, firedAt: null });
+}
+
+// ============================================================
+// ALARM CHECK (runs every 15 seconds)
+// ============================================================
+let alarmStopped = false;
+
+function checkAlarm() {
+  const now = new Date();
+  const dow = now.getDay();
+
+  // Check snooze
+  if (snoozeUntil && now >= snoozeUntil) {
+    snoozeUntil = null;
+    triggerAlarm();
+    return;
+  }
+
+  // Check if today is active
+  if (!isDayActive(dow)) return;
+
+  // Check if already handled today
+  const ts = getTodayStatus();
+  if (ts.date === dateKey() && (ts.skipped || ts.fired)) return;
+
+  // Check time match (within the same minute)
+  if (now.getHours() === config.hour && now.getMinutes() === config.min && !alarmFiredToday) {
+    triggerAlarm();
+  }
+}
+
+function triggerAlarm() {
+  if (alarmFiredToday) return;
+  alarmFiredToday = true;
+
+  // Mark as fired
+  const ts = getTodayStatus();
+  const now = new Date();
+  ts.fired = true;
+  ts.firedAt = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  ts.date = dateKey();
+  saveTodayStatus(ts);
+
+  // Show overlay
+  document.getElementById('overlaySub').textContent = '今晚 ' + fmtTime(config.hour, config.min) + ' · 形体课';
+  document.getElementById('overlay').classList.add('show');
+
+  // Play sound
+  playAlarmSound();
+
+  // Speak
+  speakAlarm();
+
+  // Notification
+  sendNotification();
+
+  // Auto-stop sound after 45 seconds if not dismissed
+  setTimeout(function() {
+    if (document.getElementById('overlay').classList.contains('show')) {
+      stopAlarmSound();
+    }
+  }, 45000);
+
+  renderAll();
+}
+
+function dismissAlarm() {
+  document.getElementById('overlay').classList.remove('show');
+  stopAlarmSound();
+  alarmFiredToday = false;
+  snoozeUntil = null;
+
+  const hist = loadHistory();
+  hist.unshift({ date: dateKey(), time: fmtTime(config.hour, config.min), type: 'dismissed', note: '已提醒' });
+  if (hist.length > 100) hist.length = 100;
+  saveHistory(hist);
+
+  renderAll();
+}
+
+function snoozeAlarm() {
+  document.getElementById('overlay').classList.remove('show');
+  stopAlarmSound();
+  snoozeUntil = new Date(Date.now() + 5 * 60 * 1000);
+  alarmFiredToday = false;
+
+  const hist = loadHistory();
+  hist.unshift({ date: dateKey(), time: fmtTime(config.hour, config.min), type: 'snoozed', note: '延迟5分钟' });
+  saveHistory(hist);
+
+  showToast('5分钟后再提醒');
+  renderAll();
+}
+
+// ============================================================
+// ALARM SOUND — System notification sound + vibration
+// Web pages can't access the phone's ringtone file.
+// Notification API uses the SYSTEM notification sound, which is the closest.
+// Combined with vibration to feel like a phone call.
+// ============================================================
+let alarmNotifyInterval = null;
+
+function playAlarmSound() {
+  alarmStopped = false;
+
+  // Fire notification every 4 seconds (system notification sound each time)
+  function fireNotify() {
+    if (alarmStopped) return;
+    sendNotification();
+    // Vibrate - pattern like a phone call: buzz-buzz-buzz
+    if (navigator.vibrate) {
+      navigator.vibrate([300, 200, 300, 200, 300]);
+    }
+  }
+
+  fireNotify();
+  alarmNotifyInterval = setInterval(fireNotify, 4000);
+}
+
+function stopAlarmSound() {
+  alarmStopped = true;
+  if (alarmNotifyInterval) { clearInterval(alarmNotifyInterval); alarmNotifyInterval = null; }
+  // Stop all vibration
+  if (navigator.vibrate) { navigator.vibrate(0); }
+}
+
+// ============================================================
+// TTS (语音播报)
+// ============================================================
+function speakAlarm() {
+  if (!window.speechSynthesis) return;
+  // Cancel any existing speech
+  speechSynthesis.cancel();
+
+  function say(text, delay) {
+    setTimeout(function() {
+      if (alarmStopped) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      u.rate = 0.85;
+      u.pitch = 1.05;
+      u.volume = 1;
+      speechSynthesis.speak(u);
+    }, delay);
+  }
+
+  say('妈，准备出门了', 0);
+  say('妈，准备出门了', 4000);
+  say('妈，准备出门了', 8000);
+}
+
+function speakFeedback(text) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = 0.9;
+  u.volume = 0.8;
+  speechSynthesis.speak(u);
+}
+
+// ============================================================
+// NOTIFICATION
+// ============================================================
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function sendNotification() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    // Use tag so repeated notifications stack (don't flood notification center)
+    new Notification('妈，准备出门了', {
+      body: '今晚 ' + fmtTime(config.hour, config.min) + ' · 形体课',
+      tag: 'mom-alarm',
+      requireInteraction: true,
+      vibrate: [300, 150, 300, 150, 600, 200, 600, 200, 300],
+    });
+  } catch(e) {}
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+// ============================================================
+// HISTORY TOGGLE
+// ============================================================
+function toggleHistory() {
+  const list = document.getElementById('historyList');
+  list.classList.toggle('show');
+  if (list.classList.contains('show')) renderHistory();
+}
+
+// ==============================
+// SERVICE WORKER
+// ==============================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+// ==============================
+// INIT
+// ==============================
+function init() {
+  renderAll();
+  requestNotificationPermission();
+
+  // Clock update every second
+  setInterval(function() {
+    renderClock();
+    // Re-render countdown every 30 seconds
+    const now = new Date();
+    if (now.getSeconds() % 30 === 0) {
+      renderAlarmCard();
+    }
+  }, 1000);
+
+  // Alarm check every 5 seconds (tight loop so we don't miss the minute)
+  setInterval(checkAlarm, 5000);
+  // Also check on load (in case we're within the alarm minute)
+  setTimeout(checkAlarm, 500);
+
+  // Reset "fired today" at midnight
+  setInterval(function() {
+    const ts = getTodayStatus();
+    const today = dateKey();
+    if (ts.date !== today) {
+      saveTodayStatus({ date: today, skipped: false, fired: false, firedAt: null });
+      alarmFiredToday = false;
+      renderAll();
+    }
+  }, 60000);
+}
+
+// Handle page visibility change (re-check alarm when coming back)
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) {
+    checkAlarm();
+    renderAll();
+  }
+});
+
+// Click to request notification permission (must be user gesture)
+document.addEventListener('click', function() {
+  requestNotificationPermission();
+}, { once: true });
+
+init();
+</script>
+</body>
+</html>

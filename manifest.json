@@ -1,0 +1,11 @@
+{
+  "name": "按时提醒",
+  "short_name": "按时提醒",
+  "description": "每日定时提醒工具",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FEF9F3",
+  "theme_color": "#1E2A3A",
+  "icons": []
+}
